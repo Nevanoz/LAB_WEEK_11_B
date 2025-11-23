@@ -1,0 +1,64 @@
+ASSIGNMENT ANSWERS
+
+
+1.  When a user takes a picture, that picture is stored in a path based on the given URI. In which part of the code handles this?
+
+takePictureLauncher =
+    registerForActivityResult(ActivityResultContracts.TakePicture()) {
+        providerFileManager.insertImageToStore(photoInfo)
+    }
+
+Fungsi penyimpanannya:
+
+fun insertImageToStore(fileInfo: FileInfo?) {
+    fileInfo?.let {
+        insertToStore(
+            fileInfo,
+            mediaContentHelper.getImageContentUri(),
+            mediaContentHelper.generateImageContentValues(it)
+        )
+    }
+}
+
+Serta detail proses copy file:
+
+private fun insertToStore(fileInfo: FileInfo, contentUri: Uri, contentValues: ContentValues) {
+    executor.execute {
+        val insertedUri = contentResolver.insert(contentUri, contentValues)
+        insertedUri?.let {
+            val inputStream = contentResolver.openInputStream(fileInfo.uri)
+            val outputStream = contentResolver.openOutputStream(insertedUri)
+            IOUtils.copy(inputStream, outputStream)
+        }
+    }
+}
+
+
+2.  In your FileInfo.kt, there are 5 attributes. On the first attribute, what does the URI refer to? And on the fourth attribute, what does relativePath refer to?
+
+Atribut pertama: uri adalah URI FileProvider yang digunakan kamera untuk menyimpan hasil foto.
+URI ini menunjuk ke lokasi file sementara di external storage aplikasi, contoh:
+content://com.example.lab_week_11_b.camera/.../img_12345.jpg
+Kamera Android akan menulis file hasil foto/video ke URI ini.
+
+Atribut keempat: relativePath adalah path folder tujuan di MediaStore (Android 10+) atau path folder di external storage.
+Contohnya:
+Untuk foto: Environment.DIRECTORY_PICTURES
+Untuk video: Environment.DIRECTORY_MOVIES
+RelativePath menentukan folder mana file akan ditempatkan oleh MediaStore:
+Pictures/
+Movies/
+
+
+3.  Explain the chronological order from when a user takes a picture until the file is stored in the MediaStore.
+
+-   User menekan tombol Photo
+-   App membuat FileInfo (nama file, uri, relativePath)
+-   Kamera dibuka melalui ActivityResultLauncher
+-   Kamera menyimpan foto ke URI FileProvider
+-   Setelah foto selesai, insertImageToStore() dipanggil
+-   MediaStore membuat entry baru
+-   File disalin menggunakan IOUtils.copy()
+-   Foto muncul di Gallery
+
+
